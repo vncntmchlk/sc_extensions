@@ -1,3 +1,6 @@
+/*
+Same as .order, but using quickSort instead of sort
+*/
 +SequenceableCollection {
     quickOrder { arg function;
             var array, orderFunc;
