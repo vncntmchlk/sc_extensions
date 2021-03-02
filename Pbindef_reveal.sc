@@ -15,7 +15,7 @@ Pbindef('').reveal will insert the keys and values which are save in the Pbindef
 			)
 		};
 		this.repositoryArgs[1..].pairsDo { |a b|
-			myTxt = myTxt ++ "Pbindef(%, %, %)\n".format(key.asCompileString, a.asCompileString, b.asCompileString)
+			myTxt = myTxt ++ "\nPbindef(%, %, %)".format(key.asCompileString, a.asCompileString, b.asCompileString)
 		};
 		replaceText.(myTxt, key.asString.size);
 	}
