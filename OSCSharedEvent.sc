@@ -1,7 +1,5 @@
-// diese "/" +/+ myPrefix +/+ k dinger waere besser in nem dict zu speichern bei kreation fuer performance? wahrscheinlich wurscht, bench sagt time to run: 4.3013999999175e-05 seconds.
-
 OSCSharedEvent : Event {
-	var myNetAddr, myPrefix, keepKeyFuncPairs, debugSendMsg;
+	var myNetAddr, myPrefix, keepKeyFuncPairs, debugSendMsg, oscAddrDict;
 	*new { | netAddr, prefix = "", postSendMsg = (false) |
 		^super.new.initNetAddrAndPrefix(netAddr, prefix, postSendMsg)
 	}
@@ -10,20 +8,21 @@ OSCSharedEvent : Event {
 		myNetAddr = netAddr;
 		myPrefix = prefix;
 		debugSendMsg = postSendMsg;
-		keepKeyFuncPairs = (Event.new())
+		keepKeyFuncPairs = (Event.new());
+		oscAddrDict = Dictionary.new();
 	}
 
 	oscAction { |k, v|
 		if(debugSendMsg){
-			if(OSCdef.all.keys.includes(("/" +/+ myPrefix +/+ k).asSymbol)){
+			if(oscAddrDict.keys.includes(k)){
 				"OSCSharedEvent sending: ".post;
-				myNetAddr.sendMsg(("/" +/+ myPrefix +/+ k).postln, *v)
+				myNetAddr.sendMsg(oscAddrDict[k].postln, *v)
 			}{
 				("OSCSharedEvent NOT sending " ++ myPrefix +/+ k).postln;
 			}
 		}{
-			if(OSCdef.all.keys.includes(("/" +/+ myPrefix +/+ k).asSymbol)){
-				myNetAddr.sendMsg(("/" +/+ myPrefix +/+ k), *v)
+			if(oscAddrDict.keys.includes(k)){
+				myNetAddr.sendMsg(oscAddrDict[k], *v)
 			}
 		}
 	}
@@ -36,19 +35,23 @@ OSCSharedEvent : Event {
 		"making OSCdefs for Addresses: ".postln;
 		//keys without function supplied
 		(keys.as(Set) - keyFuncPairs.keys).do { |k|
-			OSCdef(("/" +/+ myPrefix +/+ k).asSymbol, { |msg|
+			var addrStr = "/" +/+ myPrefix +/+ k;
+			oscAddrDict[k] = addrStr;
+			OSCdef(addrStr.asSymbol, { |msg|
 				super.put(k, msg[1..].unbubble)
-			}, ("/" +/+ myPrefix +/+ k).postln).fix
+			}, addrStr.postln).fix
 		};
 		//keys with functions to execute when new value is received
 		keyFuncPairs.keysValuesDo { |k, func|
-			OSCdef(("/" +/+ myPrefix +/+ k).asSymbol, { |msg|
+			var addrStr = "/" +/+ myPrefix +/+ k;
+			oscAddrDict[k] = addrStr;
+			OSCdef(addrStr.asSymbol, { |msg|
 				var val = msg[1..].unbubble;
 				// func will be evaluated first, so it is possible to use sharedEv.val as oldVal
 				// and the argument as newVal
 				func.(val);
 				super.put(k, val);
-			}, ("/" +/+ myPrefix +/+ k).postln).fix
+			}, addrStr.postln).fix
 		};
 		"remember to open correct udp port!".warn
 	}
@@ -59,17 +62,21 @@ OSCSharedEvent : Event {
 		"making OSCdefs for Addresses: ".postln;
 		//keys without function supplied
 		(this.keys.as(Set) - keyFuncPairs.keys).do { |k|
-			OSCdef(("/" +/+ myPrefix +/+ k).asSymbol, { |msg|
+			var addrStr = "/" +/+ myPrefix +/+ k;
+			oscAddrDict[k] = addrStr;
+			OSCdef(addrStr.asSymbol, { |msg|
 				super.put(k, msg[1..].unbubble)
-			}, ("/" +/+ myPrefix +/+ k).postln).fix
+			}, addrStr.postln).fix
 		};
 		//keys with functions to execute when new value is received
 		keyFuncPairs.keysValuesDo { |k, func|
-			OSCdef(("/" +/+ myPrefix +/+ k).asSymbol, { |msg|
+			var addrStr = "/" +/+ myPrefix +/+ k;
+			oscAddrDict[k] = addrStr;
+			OSCdef(addrStr.asSymbol, { |msg|
 				var val = msg[1..].unbubble;
 				func.(val);
 				super.put(k, val);
-			}, ("/" +/+ myPrefix +/+ k).postln).fix
+			}, addrStr.postln).fix
 		};
 		"remember to open correct udp port!".warn
 	}
