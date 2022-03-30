@@ -1,0 +1,13 @@
+title:: LoadFolder
+summary:: Load a folder with soundfiles into a Dictionary
+categories:: Utilities
+
+description::
+Class to load soundfiles from a folder into Buffers and put them into a dictionary, with the Soundfile name as key.
+
+EXAMPLES::
+code::
+~bufs = LoadFolder();
+~oase = ~bufs.load(\\oase);
+~oase.street.play;
+::

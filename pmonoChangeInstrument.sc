@@ -1,10 +1,10 @@
 PmonoStream2 : Stream {
 	var	pattern,
-		id, server, cleanup, currentCleanupFunc,
-		event,
-		streamout, name,
-		streampairs, endval,
-		msgFunc, hasGate, synthLib, desc, schedBundleArray, schedBundle;
+	id, server, cleanup, currentCleanupFunc,
+	event,
+	streamout, name,
+	streampairs, endval,
+	msgFunc, hasGate, synthLib, desc, schedBundleArray, schedBundle;
 
 	*new { |pattern|
 		^super.newCopyArgs(pattern)
@@ -28,8 +28,8 @@ PmonoStream2 : Stream {
 		}
 	}
 
-		// private methods abstracted out for the benefit of subclasses
-		// you should not use these directly
+	// private methods abstracted out for the benefit of subclasses
+	// you should not use these directly
 	prInit { |inevent|
 		cleanup = EventStreamCleanup.new;
 		streampairs = pattern.patternpairs.copy;
@@ -39,7 +39,7 @@ PmonoStream2 : Stream {
 		event = inevent.copy;
 		event.use {
 			synthLib = ~synthLib ?? { SynthDescLib.global };
-			~synthDesc = desc = synthLib.match(pattern.synthName);
+			~synthDesc = desc = synthLib.match(~instrument);  //pattern.synthName
 			if (desc.notNil) {
 				~hasGate = hasGate = desc.hasGate;
 				~msgFunc = desc.msgFunc;
@@ -64,7 +64,17 @@ PmonoStream2 : Stream {
 				// cleanup will be set at that time.
 				if(event.isRest.not) {
 					~type = \monoNote;
-					~instrument ?? {pattern.synthName};
+					~instrument = ~instrument ?? {pattern.synthName};
+					// update synthdesc
+					~synthDesc = desc = synthLib.match(~instrument);  //pattern.synthName
+					if (desc.notNil) {
+						~hasGate = hasGate = desc.hasGate;
+						~msgFunc = desc.msgFunc;
+					}{
+						~msgFunc = ~defaultMsgFunc;
+						~hasGate = hasGate = false;
+					};
+					msgFunc = ~msgFunc;
 					// ~instrument = pattern.synthName;
 					cleanup.addFunction(event, currentCleanupFunc = { | flag |
 						if (flag) { (id: id, server: server, type: \off,
@@ -107,7 +117,17 @@ PmonoStream2 : Stream {
 			~server = server;
 			~id = id;
 			~type = \monoSet;
-			~msgFunc= msgFunc;
+			~msgFunc = msgFunc;
+			//synthLib = ~synthLib ?? { SynthDescLib.global };
+			/*~synthDesc = desc = synthLib.match(~instrument);  //pattern.synthName
+			if (desc.notNil) {
+			~hasGate = hasGate = desc.hasGate;
+			~msgFunc = desc.msgFunc;
+			}{
+			~msgFunc = ~defaultMsgFunc;
+			~hasGate = hasGate = false;
+			};
+			msgFunc = ~msgFunc;*/
 		};
 	}
 }
@@ -146,9 +166,8 @@ PmonoArticStream2 : PmonoStream2 {
 
 Pmono2 : Pattern {
 	var <>synthName, <>patternpairs;
-	*new { arg name ... pairs;
-		if (pairs.size.odd, { Error("Pmono should have odd number of args.\n").throw; });
-		^super.newCopyArgs(name.asSymbol, pairs)
+	*new { arg ... pairs;
+		^super.newCopyArgs(\dummy, pairs)
 	}
 
 	embedInStream { | inevent |
