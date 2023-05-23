@@ -12,13 +12,13 @@ Spectrogram3 {
 	var userview, mouseX, mouseY, freq, drawCrossHair = false; // mYIndex, mXIndex, freq;
 	var crosshaircolor, running;
 
-	*new { arg parent, bounds, bufSize, color, background, lowfreq=0, highfreq=inf;
-		^super.new.initSpectrogram(parent, bounds, bufSize, color, background, lowfreq, highfreq);
+	*new { arg parent, bounds, bufSize, color, background, lowfreq=0, highfreq=inf, inbus = 0;
+		^super.new.initSpectrogram(parent, bounds, bufSize, color, background, lowfreq, highfreq, inbus);
 	}
 
-	initSpectrogram { arg parent, boundsarg, bufSizearg, col, bg, lowfreqarg, highfreqarg;
+	initSpectrogram { arg parent, boundsarg, bufSizearg, col, bg, lowfreqarg, highfreqarg, ib;
 		server = Server.default;
-		inbus = 0;
+		inbus = ib;
 		rate = 16; // updates per second
 		bufSize = bufSizearg ? 1024; // fft window
 		fftbuf = Buffer.alloc(server, bufSize);
@@ -72,7 +72,7 @@ Spectrogram3 {
 				Pen.stroke;
 			});
 		})
-		.mouseDownAction_({|view, mx, my|
+		/*.mouseDownAction_({|view, mx, my|
 			this.crosshairCalcFunc(view, mx, my);
 			drawCrossHair = true;
 			view.refresh;
@@ -84,12 +84,12 @@ Spectrogram3 {
 		.mouseUpAction_({|view, mx, my|
 			drawCrossHair = false;
 			view.refresh;
-		});
+		});*/
 	}
 
 	sendSynthDef {
 		SynthDef(\spectroscope, {|inbus=0, buffer=0|
-			FFT(buffer, InFeedback.ar(inbus));
+			FFT(buffer, SoundIn.ar(inbus)); //InFeedback
 		}).send(server);
 	}
 
@@ -106,10 +106,14 @@ Spectrogram3 {
 
 							magarray = buf.clump(2)[(frombin .. tobin)].flop;
 
+							/*complexarray = ((((Complex(
+								Signal.newFrom( magarray[0] ),
+								Signal.newFrom( magarray[1] )
+							).magnitude.reverse)).log10)*80).clip(0, 255);*/
 							complexarray = ((((Complex(
 								Signal.newFrom( magarray[0] ),
 								Signal.newFrom( magarray[1] )
-							).magnitude.reverse)).log10)*80).clip(0, 255);
+							).magnitude.reverse)))*80).clip(0, 255);
 
 							/*512.do {|i|
 							var val, ix = ((i + 1).log / 100.log * 377).asInteger.clip(0,511);
@@ -119,8 +123,8 @@ Spectrogram3 {
 							512.do {|i|
 								/*var val, ix = ((i + 1).log / 512.log * 512).asInteger.clip(0,511);*/
 								var val, ix = ((512 - i).log / 512.log * 512).asInteger.clip(0,511);
-								val = complexarray[ix] * intensity;
-								fftDataArray[i] = colints.clipAt((val/16).round);
+								val = complexarray[ix] * intensity * 4;
+								fftDataArray[i] = colints.clipAt((val/64).round);
 							};
 							{
 								if(index < imgHeight){
@@ -193,7 +197,7 @@ Spectrogram3 {
 
 	recalcGradient {
 		var colors;
-		colors = (0..16).collect({|val| blend(background, color, val/16)});
+		colors = (0..64).collect({|val| blend(background, color, val/64)});
 		colints = colors.collect({|col| Image.colorToPixel( col )});
 	}
 

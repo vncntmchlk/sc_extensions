@@ -1,5 +1,5 @@
-OSCSharedEvent : Event {
-	var myNetAddr, myPrefix, keepKeyFuncPairs, debugSendMsg, oscAddrDict;
+OSCSharedEventRecord : Event {
+	var myNetAddr, myPrefix, keepKeyFuncPairs, debugSendMsg, oscAddrDict, recordStarted, startTime, logList;
 	classvar <>all;
 
 	*initClass {
@@ -21,6 +21,50 @@ OSCSharedEvent : Event {
 		debugSendMsg = postSendMsg;
 		keepKeyFuncPairs = (Event.new());
 		oscAddrDict = Dictionary.new();
+		recordStarted = false;
+	}
+
+	startRecord {
+		recordStarted = true;
+		startTime = Main.elapsedTime;
+		logList = List.new;
+		this.keysValuesDo {|k, v|
+			this.logKeyValue(k, v);
+		}
+	}
+
+	logKeyValue {|key, value|
+		if(recordStarted){
+			var timeNow = Main.elapsedTime - startTime;
+			logList.add([timeNow, key, value]);
+		}
+	}
+
+	stopRecord { |savePath|
+		recordStarted = false;
+		if(savePath.notNil){
+			logList.writeArchive(savePath)
+		};
+	}
+
+	playBackRoutine { |loadPath|
+		if(recordStarted){
+			"stop record first".warn;
+		}{
+			var playBackList = Object.readArchive(loadPath);
+			^Routine {
+				var lastTime = 0;
+				playBackList.do {|arr|
+					var time = arr[0];
+					var key = arr[1];
+					var value = arr[2];
+					((time - lastTime) * thisThread.clock.tempo).wait;
+					lastTime = time;
+					// [key, value].postln;
+					this.put(key, value);
+				};
+			}
+		}
 	}
 
 	oscAction { |k, v|
@@ -52,7 +96,9 @@ OSCSharedEvent : Event {
 			oscAddrDict[k] = addrStr;
 			if(debugSendMsg){addrStr.postln};
 			OSCdef(addrStr.asSymbol, { |msg|
-				super.put(k, msg[1..].unbubble)
+				var val = msg[1..].unbubble;
+				this.logKeyValue(k, val);
+				super.put(k, val)
 			}, addrStr).fix
 		};
 		//keys with functions to execute when new value is received
@@ -65,6 +111,7 @@ OSCSharedEvent : Event {
 				// func will be evaluated first, so it is possible to use sharedEv.val as oldVal
 				// and the argument as newVal
 				func.(val);
+				this.logKeyValue(k, val);
 				super.put(k, val);
 			}, addrStr).fix
 		};
@@ -85,7 +132,9 @@ OSCSharedEvent : Event {
 			oscAddrDict[k] = addrStr;
 			if(debugSendMsg){addrStr.postln};
 			OSCdef(addrStr.asSymbol, { |msg|
-				super.put(k, msg[1..].unbubble)
+				var val = msg[1..].unbubble;
+				this.logKeyValue(k, val);
+				super.put(k, val)
 			}, addrStr).fix
 		};
 		//keys with functions to execute when new value is received
@@ -96,6 +145,7 @@ OSCSharedEvent : Event {
 			OSCdef(addrStr.asSymbol, { |msg|
 				var val = msg[1..].unbubble;
 				func.(val);
+				this.logKeyValue(k, val);
 				super.put(k, val);
 			}, addrStr).fix
 		};
@@ -115,6 +165,7 @@ OSCSharedEvent : Event {
 		};
 		this.oscAction(key, value);
 		//};
+		this.logKeyValue(key, value);
 		super.put(key, value);
 	}
 }
